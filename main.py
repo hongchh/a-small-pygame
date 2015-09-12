@@ -14,7 +14,7 @@ pygame.mixer.init()
 #游戏背景
 bg_size = bg_width, bg_height = 426, 700
 screen = pygame.display.set_mode(bg_size)
-pygame.display.set_caption('Plane War --测试版')
+pygame.display.set_caption('Plane War ---更新版2')
 
 background = pygame.image.load('image/background.jpg').convert()
 
@@ -76,6 +76,7 @@ def inc_speed(tar, inc):
 
 def main():
     pygame.mixer.music.play(-1)
+    global background
 
     #游戏分数
     best_score = 0
@@ -149,15 +150,41 @@ def main():
     level = 1
     #用于防止重复打开记录文件
     recorded = False
+    #游戏结束后的选项及其属性
+    quit_text = font.render('Quit', True, WHITE)
+    again_text = font.render('Again', True, WHITE)
+    quit_pos = quit_text.get_rect()
+    again_pos = again_text.get_rect()
+    quit_pos.left = bg_width // 3 - quit_pos.width // 2
+    quit_pos.top = bg_height // 2 + 150
+    again_pos.left = bg_width // 3 * 2 - again_pos.width // 2
+    again_pos.top = bg_height // 2 + 150
     
     clock = pygame.time.Clock()
+    running = True
+
+    #绘制前言介绍
+    while running:
+        for event in pygame.event.get():
+            if event.type == QUIT:
+                sys.exit()
+            elif event.type == KEYDOWN:
+                running = False
+
+        info = pygame.image.load('image/info.jpg').convert()
+        screen.blit(info, (0, 0))
+
+        pygame.display.flip()
+        clock.tick(30)
+
+    #游戏正式开始
     running = True
     while running:
         for event in pygame.event.get():
             if event.type == QUIT:
                 sys.exit()
             #点击鼠标游戏暂停
-            elif event.type == MOUSEBUTTONDOWN:
+            elif life_num > 0 and event.type == MOUSEBUTTONDOWN:
                 paused = not paused
                 if paused:#暂停游戏时关闭音乐音效和补给
                     pygame.time.set_timer(SUPPLY_TIME, 0)
@@ -191,6 +218,53 @@ def main():
             elif event.type == MY_PLANE_INVINCIBLE_TIME:
                 me.invincible = False
                 pygame.time.set_timer(MY_PLANE_INVINCIBLE_TIME, 0)
+            #gameover之后玩家的选择
+            elif life_num == 0 and event.type == MOUSEBUTTONDOWN:
+                mouse_pos = event.pos
+                #玩家选择退出
+                if mouse_pos[0] > quit_pos.left and \
+                   mouse_pos[0] < quit_pos.right and \
+                   mouse_pos[1] > quit_pos.top and \
+                   mouse_pos[1] < quit_pos.bottom:
+                    sys.exit()
+                #玩家选择再玩
+                if mouse_pos[0] > again_pos.left and \
+                   mouse_pos[0] < again_pos.right and \
+                   mouse_pos[1] > again_pos.top and \
+                   mouse_pos[1] < again_pos.bottom:
+                    #重设背景并播放背景音乐同时关闭gameover音效
+                    background = pygame.image.load('image/background.jpg').convert()
+                    pygame.mixer.stop()
+                    pygame.mixer.music.play(-1)
+                    #重设分数
+                    your_score = 0
+                    #重新生成敌机
+                    enemies = pygame.sprite.Group()
+                    small_planes = pygame.sprite.Group()
+                    add_small_planes(small_planes, enemies, 15)
+                    middle_planes = pygame.sprite.Group()
+                    add_middle_planes(middle_planes, enemies, 5)
+                    big_planes = pygame.sprite.Group()
+                    add_big_planes(big_planes, enemies, 2)
+                    #重设全屏炸弹数量及玩家生命数，重设我方飞机
+                    bomb_num = 3
+                    life_num = 3
+                    me.reset()
+                    pygame.time.set_timer(MY_PLANE_INVINCIBLE_TIME, 3000)
+                    #开启补给包，超级子弹判断重设
+                    pygame.time.set_timer(SUPPLY_TIME, 30 * 1000)
+                    is_supper_bullet = False
+                    #重设飞机毁灭恢复参数
+                    big_plane_destroy = 0
+                    middle_plane_destroy = 0
+                    small_plane_destroy = 0
+                    my_plane_destroy = 0
+                    #其他设定
+                    switch_image = True
+                    delay = 100
+                    paused = False
+                    level = 1
+                    recorded = False
         
         #根据用户得分增加游戏难度
         if level == 1 and your_score > 50000:
@@ -234,7 +308,7 @@ def main():
         #游戏主流程
         screen.blit(background, (0, 0))#画背景
         if life_num > 0 and not paused:
-            #检测用户键盘操作控制我方飞机方向
+            #检测玩家键盘操作控制我方飞机方向
             key_pressed = pygame.key.get_pressed()
             if key_pressed[K_UP]:
                 me.moveUp()
@@ -440,12 +514,36 @@ def main():
                 recorded = True
                 pygame.mixer.stop() #停止其他音效
                 game_over_sound.play() #顺便防止重复播放结束音乐
+                #防止重复加载图片
+                background = pygame.image.load('image/gameover_background.jpg').convert()
             #绘制分数，最高分和当前分数
             best_score_text = font.render('Best Score: %s' % str(best_score), True, WHITE)
             screen.blit(best_score_text, (40, 50))
             your_score_text = font.render('Your Score: %s' % str(your_score), True, WHITE)
             screen.blit(your_score_text, ((bg_width - your_score_text.get_width()) // 2, \
                                           (bg_height + game_over.get_height()) // 2 + 30))
+            #绘制选择项
+            screen.blit(quit_text, quit_pos)
+            screen.blit(again_text, again_pos)
+            #鼠标停在Quit上时字体变为红色，否则为白色
+            #鼠标停在Again上时字体变为绿色，否则为白色
+            mouse_pos = pygame.mouse.get_pos()
+            #Quit部分
+            if mouse_pos[0] > quit_pos.left and \
+               mouse_pos[0] < quit_pos.right and \
+               mouse_pos[1] > quit_pos.top and \
+               mouse_pos[1] < quit_pos.bottom:
+                quit_text = font.render('Quit', True, RED)
+            else:
+                quit_text = font.render('Quit', True, WHITE)
+
+            if mouse_pos[0] > again_pos.left and \
+               mouse_pos[0] < again_pos.right and \
+               mouse_pos[1] > again_pos.top and \
+               mouse_pos[1] < again_pos.bottom:
+                again_text = font.render('Again', True, GREEN)
+            else:
+                again_text = font.render('Again', True, WHITE)
         #每隔5帧切换图片
         if not(delay % 5):
             switch_image = not switch_image 
