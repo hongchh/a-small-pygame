@@ -377,7 +377,7 @@ def main():
                                      (each.rect.right, each.rect.top - 5), \
                                      2)
                     #血量 > 20%时显示绿色，否则红色
-                    energy_remain = each.energy / enemy.BigPlane.energy
+                    energy_remain = each.energy * 1.0 / enemy.BigPlane.energy
                     if energy_remain > 0.2:
                         energy_color = GREEN
                     else:
@@ -411,7 +411,7 @@ def main():
                                 (each.rect.right, each.rect.top - 5), \
                                 2)
                 #血量 > 20%时显示绿色，否则红色
-                energy_remain = each.energy / enemy.MiddlePlane.energy
+                energy_remain = each.energy * 1.0 / enemy.MiddlePlane.energy
                 if energy_remain > 0.2:
                     energy_color = GREEN
                 else:
